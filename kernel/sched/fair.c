@@ -4685,9 +4685,6 @@ static inline void hrtick_update(struct rq *rq)
 
 #ifdef CONFIG_SMP
 static bool cpu_overutilized(int cpu);
-unsigned long boosted_cpu_util(int cpu);
-#else
-#define boosted_cpu_util(cpu) cpu_util(cpu)
 #endif
 
 #ifdef CONFIG_SMP

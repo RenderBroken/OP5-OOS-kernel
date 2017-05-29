@@ -1624,6 +1624,10 @@ static inline unsigned long cpu_util(int cpu)
 	return __cpu_util(cpu, 0);
 }
 
+unsigned long boosted_cpu_util(int cpu);
+
+#else /* CONFIG_SMP */
+#define boosted_cpu_util(cpu) cpu_util(cpu)
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_SCHED
