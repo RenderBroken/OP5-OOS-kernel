@@ -59,6 +59,7 @@ struct sched_param {
 #include <linux/gfp.h>
 #include <linux/magic.h>
 #include <linux/cgroup-defs.h>
+#include <linux/average.h>
 
 #include <asm/processor.h>
 
@@ -1267,6 +1268,12 @@ struct load_weight {
 };
 
 /*
+ * Support functions to track the Exponential Weighted Moving
+ * Average (EWMA) estimation for SEs and RQs utilization.
+ */
+DECLARE_EWMA(util, 1024, 8);
+
+/*
  * The load_avg/util_avg accumulates an infinite geometric series.
  * 1) load_avg factors frequency scaling into the amount of time that a
  * sched_entity is runnable on a rq into its weight. For cfs_rq, it is the
@@ -1284,6 +1291,13 @@ struct sched_avg {
 	u64 last_update_time, load_sum;
 	u32 util_sum, period_contrib;
 	unsigned long load_avg, util_avg;
+
+	/* Utilization estimation */
+	struct ewma_util                util_ewma;
+	struct {
+		unsigned long ewma;
+		unsigned long last;
+	}				util_est;
 };
 
 #ifdef CONFIG_SCHEDSTATS

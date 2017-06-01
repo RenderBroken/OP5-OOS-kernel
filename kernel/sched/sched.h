@@ -1712,6 +1712,29 @@ extern unsigned int sysctl_sched_use_walt_cpu_util;
 extern unsigned int walt_ravg_window;
 extern unsigned int walt_disabled;
 
+#define UTIL_EST_MAX_EWMA_LAST 0 /* max(sa->util_est.ema, sa->util_est.last) */
+#define UTIL_EST_EWMA          1 /* sa->util_est.ewma */
+#define UTIL_EST_LAST          2 /* sa->util_est.last */
+
+#define UTIL_EST_POLICY        UTIL_EST_MAX_EWMA_LAST
+
+static inline unsigned long
+util_est(struct sched_avg *sa, int policy)
+{
+	if (likely(policy == UTIL_EST_MAX_EWMA_LAST))
+		return max(sa->util_est.ewma, sa->util_est.last);
+	if (policy == UTIL_EST_EWMA)
+		return sa->util_est.ewma;
+	return sa->util_est.last;
+}
+
+static inline unsigned long task_util_est(struct task_struct *p)
+{
+	struct sched_avg *sa = &p->se.avg;
+
+	return util_est(sa, UTIL_EST_POLICY);
+}
+
 /*
  * cpu_util returns the amount of capacity of a CPU that is used by CFS
  * tasks. The unit of the return value must be the one of capacity so we can
@@ -1765,6 +1788,7 @@ unsigned long boosted_cpu_util(int cpu);
 
 #else /* CONFIG_SMP */
 #define boosted_cpu_util(cpu) cpu_util(cpu)
+#define task_util_est(p) task_util(p)
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_SCHED
