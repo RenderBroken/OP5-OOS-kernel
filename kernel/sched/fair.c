@@ -4885,7 +4885,6 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 }
 
 static void set_next_buddy(struct sched_entity *se);
-static unsigned long task_util(struct task_struct *p);
 
 /*
  * The dequeue_task method is called before nr_running is
@@ -6180,17 +6179,6 @@ static int wake_affine(struct sched_domain *sd, struct task_struct *p,
 	return 1;
 }
 
-static inline unsigned long task_util(struct task_struct *p)
-{
-#ifdef CONFIG_SCHED_WALT
-	if (!walt_disabled && sysctl_sched_use_walt_task_util) {
-		unsigned long demand = p->ravg.demand;
-		return (demand << 10) / walt_ravg_window;
-	}
-#endif
-	return p->se.avg.util_avg;
-}
-
 static inline bool __task_fits(struct task_struct *p, int cpu, int util)
 {
 	unsigned long capacity = capacity_of(cpu);
@@ -6570,7 +6558,9 @@ done:
  */
 static int cpu_util_wake(int cpu, struct task_struct *p)
 {
-	unsigned long util, capacity;
+	unsigned long capacity = capacity_orig_of(cpu);
+	unsigned long util = cpu_util(cpu);
+	unsigned long util_est = 0;
 
 #ifdef CONFIG_SCHED_WALT
 	/*
@@ -6580,16 +6570,41 @@ static int cpu_util_wake(int cpu, struct task_struct *p)
 	 * cpu_util for this case.
 	 */
 	if (!walt_disabled && sysctl_sched_use_walt_cpu_util)
-		return cpu_util(cpu);
+		return util;
 #endif
+
+	/*
+	 * Estimated utilization tracks only tasks alreay enqueued thus
+	 * we do not need to remove any contribution for the specified task.
+	 */
+	if (sched_feat(UTIL_EST))
+		util_est = min_t(long, capacity, cpu_util_est(cpu));
+
 	/* Task has no contribution or is new */
 	if (cpu != task_cpu(p) || !p->se.avg.last_update_time)
-		return cpu_util(cpu);
+		return max_t(long, util_est, util);
 
-	capacity = capacity_orig_of(cpu);
-	util = max_t(long, cpu_util(cpu) - task_util(p), 0);
+	/*
+	 * The task's PELT utilization has been already decayed and
+	 * synchronized with its RQ in select_task_rq_fair::wake_cap.
+	 * Let's remove the remaning (decayed) task utilization from the RQ's
+	 * blocked load.
+	 */
+	util = max_t(long, util - task_util(p), 0);
+	util = min_t(long, capacity, util);
 
-	return (util >= capacity) ? capacity : util;
+	/*
+	 * In case the task is waking up on a CPU which has been recently
+	 * activated by another task after a (relatively) long sleep period,
+	 * the estimated utilization of the already running task can be a
+	 * better estimation of the CPU bandwidth already in use.
+	 * In all other cases (e.g. lightly idle CPUs with many tasks
+	 * sleeping on it), the PELT's utilization is a better estimation
+	 * because of the tracked blocked load.
+	 */
+	util = max_t(long, util_est, util);
+
+	return util;
 }
 
 static int start_cpu(bool boosted)
@@ -6698,7 +6713,7 @@ static inline int find_best_target(struct task_struct *p, int *backup_cpu,
 			 * accounting. However, the blocked utilization may be zero.
 			 */
 			wake_util = cpu_util_wake(i, p);
-			new_util = wake_util + task_util(p);
+			new_util = wake_util + task_util_est(p);
 
 			/*
 			 * Ensure minimum capacity to grant the required boost.

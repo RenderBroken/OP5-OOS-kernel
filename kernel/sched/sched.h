@@ -1728,9 +1728,24 @@ util_est(struct sched_avg *sa, int policy)
 	return sa->util_est.last;
 }
 
+static inline unsigned long task_util(struct task_struct *p)
+{
+#ifdef CONFIG_SCHED_WALT
+	if (!walt_disabled && sysctl_sched_use_walt_task_util) {
+		unsigned long demand = p->ravg.demand;
+
+		return (demand << 10) / walt_ravg_window;
+	}
+#endif
+	return p->se.avg.util_avg;
+}
+
 static inline unsigned long task_util_est(struct task_struct *p)
 {
 	struct sched_avg *sa = &p->se.avg;
+
+	if (!sched_feat(UTIL_EST))
+		return task_util(p);
 
 	return util_est(sa, UTIL_EST_POLICY);
 }
@@ -1786,9 +1801,26 @@ static inline unsigned long cpu_util(int cpu)
 
 unsigned long boosted_cpu_util(int cpu);
 
+static inline int cpu_util_est(int cpu)
+{
+	struct sched_avg *sa = &cpu_rq(cpu)->cfs.avg;
+	unsigned long util = cpu_util(cpu);
+
+	/*
+	 * NOTE: for RQs we do not track an EWMA, thus the estimated
+	 *       utilization is always defined just by the sum of the
+	 *       task_util_est() for each RUNNABLE task.
+	 * The eventually non zero blocked utilization related to tasks
+	 * currently not running on the CPU is accounted considering the
+	 * PELT signal.
+	 */
+	return max(util, util_est(sa, UTIL_EST_LAST));
+}
+
 #else /* CONFIG_SMP */
 #define boosted_cpu_util(cpu) cpu_util(cpu)
 #define task_util_est(p) task_util(p)
+#define cpu_util_est(cpu) cpu_util(cpu)
 #endif
 
 #ifdef CONFIG_CPU_FREQ_GOV_SCHED
