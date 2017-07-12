@@ -1975,7 +1975,6 @@ static int fb_state_change(struct notifier_block *nb,
 		}
 
 		if (val == FB_EVENT_BLANK) {
-			sched_set_boost(NO_BOOST);
 			/* remove print actvie ws */
 			pm_print_active_wakeup_sources_queue(false);
 			pr_debug("::: LCD is on :::\n");
