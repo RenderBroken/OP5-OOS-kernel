@@ -7243,6 +7243,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 
 			group = find_idlest_group(sd, p, cpu, sd_flag);
 			if (!group) {
+                                new_cpu = cpu;
 				sd = sd->child;
 				continue;
 			}
