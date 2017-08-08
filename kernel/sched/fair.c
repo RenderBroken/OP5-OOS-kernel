@@ -7249,7 +7249,7 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
 			}
 
 			new_cpu = find_idlest_cpu(group, p, cpu);
-			if (new_cpu == -1 || new_cpu == cpu) {
+			if (new_cpu == cpu) {
 				/* Now try balancing at a lower domain level of cpu */
 				sd = sd->child;
 				continue;
