@@ -88,7 +88,7 @@ echo "Render Kernel Creation Script:"
 echo -e "${restore}"
 
 echo "Pick Toolchain..."
-select choice in LINARO-aarch64-linux-gnu-4.9.4-062017 LINARO-aarch64-linux-gnu-5.3.1-05012016 LINARO-aarch64-linux-gnu-6.3.1-052017 LINARO-aarch64-linux-gnu-7.1.1-062017
+select choice in LINARO-aarch64-linux-gnu-4.9.4-062017 LINARO-aarch64-linux-gnu-5.3.1-05012016 LINARO-aarch64-linux-gnu-6.3.1-052017 LINARO-aarch64-linux-gnu-7.1.1-062017 UBER-aarch64-linux-android-4.9-082017
 do
 case "$choice" in
 	"LINARO-aarch64-linux-gnu-4.9.4-062017")
@@ -102,6 +102,9 @@ case "$choice" in
 		break;;
 	"LINARO-aarch64-linux-gnu-7.1.1-062017")
 		export CROSS_COMPILE=${HOME}/android/source/toolchains/LINARO-aarch64-linux-gnu-7.1.1-062017/bin/aarch64-linux-gnu-
+		break;;
+	"UBER-aarch64-linux-android-4.9-082017")
+		export CROSS_COMPILE=${HOME}/android/source/toolchains/UBER-aarch64-linux-android-4.9-082017/bin/aarch64-linux-gnu-
 		break;;
 esac
 done
