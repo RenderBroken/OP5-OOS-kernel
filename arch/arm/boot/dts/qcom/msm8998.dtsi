@@ -375,6 +375,8 @@
 				idle-cost-data = <
 					0
 					0
+					0
+					0
 				>;
 			};
 			CLUSTER_COST_1: cluster-cost1 {
@@ -412,6 +414,8 @@
 					1024 131
 				>;
 				idle-cost-data = <
+					0
+					0
 					0
 					0
 				>;
